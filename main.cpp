@@ -1,7 +1,6 @@
 #include "error/errorReporting.h"
 #include "lexer/lexer.h"
 #include "parser/parser.h"
-#include <algorithm>
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
@@ -27,13 +26,11 @@ int main(int argc, char **argv) {
     lexer l(data);
     parser p(l.getTokens());
     p.construct();
-    /*
 
     if (hasError) {
       std::cout << "Cannot be compiled" << std::endl;
       exit(65);
     }
-    */
 
     s.close();
   }
