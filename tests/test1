@@ -1,0 +1,12 @@
+func square (x) {
+    return x * x;
+};
+
+int z = 10;
+String r = "Hello";
+int y = z * z;
+decimal b = 10.0001;
+bool t = true;
+bool x = t && (false || t);
+//this will be a comment to see how it is parsed;
+return y;
