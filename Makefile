@@ -1,5 +1,5 @@
 CC = g++
-CPPFLAGS = -Wall -g -std=c++11
+CPPFLAGS = -Wall -g -std=c++17
 LINKER = $(CC) -o
 TARGET = interpreter
 SRCS = $(shell find * -type f -name "*.cpp")

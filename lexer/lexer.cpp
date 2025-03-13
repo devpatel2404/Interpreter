@@ -1,19 +1,25 @@
 #include "lexer.h"
 #include "../error/errorReporting.h"
 #include <cstddef>
+#include <fstream>
+#include <iostream>
 #include <string>
 #include <unistd.h>
 #include <vector>
 
-lexer::lexer(std::string s) : input(s), readPos(0), pos(-1), byte('\0') {
-  readChar();
-};
+// change to be line by line for better error parsing;
+
+lexer::lexer(std::ifstream *stream)
+    : input(stream), readPos(0), pos(-1), byte('\0'), current(), line(0) {};
 
 void lexer::readChar() {
-  if (readPos >= input.size()) {
-    byte = '\0';
+  if (readPos >= current.size()) {
+    if (next_line())
+      return;
+    else
+      byte = '\0';
   } else
-    byte = input[readPos];
+    byte = current[readPos];
   pos = readPos;
   readPos++;
 }
@@ -21,106 +27,123 @@ void lexer::readChar() {
 Token lexer::NextToken() {
   Token tok;
 
-  // std::cout << "Byte Read: " << byte << " ";
-
   switch (byte) {
-  // add double and or equal.
   case '+':
-    tok = makeToken("+", PLUS);
+    tok = makeTokenI("+", PLUS, line);
     break;
   case '-':
-    tok = makeToken("-", MINUS);
+    tok = makeTokenI("-", MINUS, line);
     break;
   case '/':
-    if (input[readPos] == '/') {
-      while (byte != '\n') {
-        readChar();
-      }
-      skipWhitespace();
-      return {"\0", ILLEGAL};
+    if (current[readPos] == '/') {
+      next_line();
+      return {"Comment", ILLEGAL, line};
     }
-    tok = makeToken("/", FSLASH);
+    tok = makeTokenI("/", FSLASH, line);
     break;
   case '*':
-    tok = makeToken("*", ASTERISK);
+    tok = makeTokenI("*", ASTERISK, line);
     break;
   case '^':
-    tok = makeToken("^", BITOR);
+    tok = makeTokenI("^", BITOR, line);
     break;
   case '%':
-    tok = makeToken("%", MODULOS);
+    tok = makeTokenI("%", MODULOS, line);
     break;
   case '|':
-    if (input[readPos] == '|') {
+    if (current[readPos] == '|') {
       readChar();
-      tok = makeToken("||", OR);
+      tok = makeTokenI("||", OR, line);
     } else
-      tok = makeToken("|", PIPE);
+      tok = makeTokenI("|", PIPE, line);
     break;
   case '&':
-    if (input[readPos] == '&') {
+    if (current[readPos] == '&') {
       readChar();
-      tok = makeToken("&&", AND);
+      tok = makeTokenI("&&", AND, line);
     } else
-      tok = makeToken("&", BITAND);
+      tok = makeTokenI("&", BITAND, line);
     break;
   case '(':
-    tok = makeToken("(", LPAREN);
+    tok = makeTokenI("(", LPAREN, line);
     break;
   case ')':
-    tok = makeToken(")", RPAREN);
+    tok = makeTokenI(")", RPAREN, line);
     break;
   case '{':
-    tok = makeToken("{", LCURLY);
+    tok = makeTokenI("{", LCURLY, line);
     break;
   case '}':
-    tok = makeToken("}", RCURLY);
+    tok = makeTokenI("}", RCURLY, line);
     break;
   case '[':
-    tok = makeToken("[", LBRACK);
+    tok = makeTokenI("[", LBRACK, line);
     break;
   case ']':
-    tok = makeToken("]", RBRACK);
+    tok = makeTokenI("]", RBRACK, line);
     break;
   case '!':
-    tok = makeToken("!", NOT);
+    if (current[readPos] == '=') {
+      readChar();
+      tok = makeTokenI("!=", NOTEQ, line);
+    } else
+      tok = makeTokenI("!", NOT, line);
     break;
   case ';':
-    tok = makeToken(";", SEMICOLON);
+    tok = makeTokenI(";", SEMICOLON, line);
     break;
   case '=':
-    if (input[readPos] == '=') {
+    if (current[readPos] == '=') {
       readChar();
-      tok = makeToken("==", CHECK);
+      tok = makeTokenI("==", CHECK, line);
     } else
-      tok = makeToken("=", ASSIGN);
+      tok = makeTokenI("=", ASSIGN, line);
     break;
+  case ':':
+    tok = makeTokenI(":", COLON, line);
   case '"':
-    tok = makeToken(readString(), STRING);
+    tok = makeTokenI(readString(), STRING, line);
     break;
   case '\'':
-    tok = makeToken(readCharacter(), CHARACTER);
+    tok = makeTokenI(readCharacter(), CHARACTER, line);
+    break;
+  case '<':
+    if (current[readPos] == '=') {
+      readChar();
+      tok = makeTokenI("<=", LESOREQ, line);
+    } else
+      tok = makeTokenI("<", LESS, line);
+    break;
+  case '>':
+    if (current[readPos] == '=') {
+      readChar();
+      tok = makeTokenI(">=", GRTOREQ, line);
+    } else
+      tok = makeTokenI(">", GREATER, line);
     break;
   default:
     if (isLetter(byte)) {
       tok.literal = readIdent();
       tok.token = findIdent(tok.literal);
+      tok.line = line;
     } else if (isNum(byte)) {
       std::string n = readNum();
-      if (n.find('.') != -1)
-        tok = makeToken(n, DECIMAL);
-      else
-        tok = makeToken(readNum(), INT);
+      if (n.find('.') != -1) {
+        if (n.back() != '.')
+          tok = makeTokenI(n, DECIMAL, line);
+        else {
+          tok = makeTokenI(n, ILLEGAL, line);
+          errorI(line, "need atleast one trailing decimal point");
+        }
+      } else
+        tok = makeTokenI(n, INT, line);
     } else {
-      tok = makeToken(std::to_string(byte), ILLEGAL);
+      tok = makeTokenI(std::to_string(byte), ILLEGAL, line);
       std::string message("unexpected CHARACTER: ");
       message += byte;
-      error(line, message);
+      errorI(line, message);
     }
   }
-
-  std::cout << "Token: " << TokentypeToString(tok.token)
-            << " String: " << tok.literal << std::endl;
 
   skipWhitespace();
 
@@ -138,6 +161,10 @@ TokenType lexer::findIdent(std::string s) {
     return CHARACTER;
   if (s == "decimal")
     return DECIMAL;
+  if (s == "void")
+    return VOID;
+  if (s == "null")
+    return null;
   if (s == "true")
     return TRUE;
   if (s == "bool")
@@ -176,14 +203,12 @@ bool lexer::isNum(char c) {
 }
 
 std::string lexer::readIdent() {
-  // std::cout << "\tReading IDENT Starting byte: " << byte;
   std::string s;
-  while (isLetter(byte) || isNum(byte) || byte == '-' || byte == '_' ||
-         byte == '\'') {
+  while (isLetter(byte) || isNum(byte) || byte == '-' || byte == '_') {
     s.push_back(byte);
-    if (isLetter(input[readPos]) || isNum(input[readPos]) ||
-        input[readPos] == '-' || input[readPos] == '_' ||
-        input[readPos] == '\'')
+    if (isLetter(current[readPos]) || isNum(current[readPos]) ||
+        current[readPos] == '-' || current[readPos] == '_' ||
+        current[readPos] == '\'')
       readChar();
     else
       break;
@@ -197,29 +222,33 @@ std::string lexer::readNum() {
   bool foundDot = false;
   while (isNum(byte) || (byte == '.' && !foundDot)) {
     s.push_back(byte);
-    if (byte == '.') {
+    if (byte == '.')
       foundDot = true;
+    if (isNum(current[readPos]) || (current[readPos] == '.' && !foundDot)) {
       readChar();
-      continue;
-    }
-    if (isNum(input[readPos]) || (input[readPos] == '.' && !foundDot))
-      readChar();
-    else
+    } else {
       break;
+    }
   }
 
   return s;
 }
 
 std::vector<Token> lexer::getTokens() {
+  std::cout << "Lexer Recieved the file." << std::endl;
+  next_line();
   std::vector<Token> toks;
-  while (byte != '\0') {
+  while (!input->eof()) {
     Token b = NextToken();
-    if (b.literal == "\0")
+    if (b.literal == "Comment")
       continue;
     else
       toks.push_back(b);
+    if (input->eof())
+      break;
   }
+
+  input->close();
 
   return toks;
 }
@@ -238,18 +267,55 @@ void lexer::skipWhitespace() {
 }
 
 std::string lexer::readString() {
-  // add more advanced error handling if missing a parenthesis make sure
   std::string s;
   s.push_back(byte);
   readChar();
   while (byte != '"') {
+    if (readPos == current.size())
+      break;
     s.push_back(byte);
     readChar();
   }
 
-  s.push_back(byte);
+  if (byte == '"')
+    s.push_back(byte);
+
+  if (s.back() != '"') {
+    errorI(line, "Missing closing quotationg mark");
+  }
 
   return s;
 }
 
-std::string lexer::readCharacter() { return "hello"; }
+std::string lexer::readCharacter() {
+  std::string s;
+  s.push_back(byte);
+  readChar();
+  s.push_back(byte);
+  while (byte != '\'') {
+    if (readPos == current.size())
+      break;
+    readChar();
+    s.push_back(byte);
+  }
+
+  if (s.size() > 3)
+    errorI(line, "A character can only have one value, cannot be assigned like "
+                 "a string");
+
+  if (s.back() != '\'')
+    errorI(line, "Missing closing apostrophe");
+
+  return s;
+}
+
+bool lexer::next_line() {
+  if (std::getline(*input, current)) {
+    line++;
+    readPos = 0;
+    pos = -1;
+    readChar();
+    return true;
+  }
+  return false;
+}

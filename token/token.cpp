@@ -3,6 +3,8 @@
 
 Token makeToken(std::string s, TokenType t) { return {s, t}; }
 
+Token makeTokenI(std::string s, TokenType t, int line) { return {s, t, line}; }
+
 std::string TokentypeToString(TokenType t) {
   switch (t) {
   case IDENT:
@@ -65,6 +67,14 @@ std::string TokentypeToString(TokenType t) {
     return "APOSTRAPHE";
   case QUOTATION:
     return "QUOTATION";
+  case GREATER:
+    return "GREATER";
+  case GRTOREQ:
+    return "GRTOREQ";
+  case LESS:
+    return "LESS";
+  case LESOREQ:
+    return "LESOREQ";
   case PIPE:
     return "PIPE";
   case DOT:
@@ -79,6 +89,14 @@ std::string TokentypeToString(TokenType t) {
     return "PRINT";
   case COMMA:
     return "COMMA";
+  case COLON:
+    return "COLON";
+  case VOID:
+    return "VOID";
+  case NOTEQ:
+    return "NOTEQ";
+  case null:
+    return "null";
   default:
     return "ILLEGAL";
   }

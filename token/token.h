@@ -14,10 +14,13 @@ enum TokenType {
   DECIMAL,
   CHARACTER,
   BOOL,
+  VOID,
+  null,
 
   PLUS,
   MINUS,
   ASTERISK,
+  BACKSLASH,
   ASSIGN,
   FSLASH,
   AND,
@@ -26,6 +29,11 @@ enum TokenType {
   BITOR,
   MODULOS,
   NOT,
+  NOTEQ,
+  GREATER,
+  LESS,
+  GRTOREQ,
+  LESOREQ,
   CHECK,
   PIPE,
   COMMA,
@@ -39,6 +47,7 @@ enum TokenType {
   PRINT,
 
   SEMICOLON,
+  COLON,
   TRUE,
   FALSE,
 
@@ -51,14 +60,18 @@ enum TokenType {
   RBRACK,
   LPAREN,
   RPAREN,
+  EoF
 };
 
 struct Token {
   std::string literal;
   TokenType token;
+  int line;
 };
 
 Token makeToken(std::string s, TokenType t);
+
+Token makeTokenI(std::string s, TokenType t, int line);
 
 TokenType findToken(std::string s);
 

@@ -1,12 +1,7 @@
-func square (x) {
-    return x * x;
-};
+int control = 12 + 12;
+int goodkidmadcity = 12 + 11;
+int damn = 17 + 2000;
+int gnx = 2024;
 
-int z = 10;
-String r = "Hello";
-int y = z * z;
-decimal b = 10.0001;
-bool t = true;
-bool x = t && (false || t);
-//this will be a comment to see how it is parsed;
-return y;
+string s = "Riding in my gnx";
+string p = "I got loyalty, got royalty inside my DNA";

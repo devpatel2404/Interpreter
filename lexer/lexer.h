@@ -1,24 +1,27 @@
 #include "../token/token.h"
+#include <fstream>
 #include <iostream>
 #include <string>
 
 class lexer {
 public:
-  lexer(std::string s);
-  void readChar();
-  Token NextToken();
-  std::string readNum();
-  std::string readIdent();
-  bool isLetter(char c);
-  bool isNum(char c);
-  TokenType findIdent(std::string s);
+  lexer(std::ifstream *stream);
   std::vector<Token> getTokens();
-  void skipWhitespace();
-  std::string readString();
-  std::string readCharacter();
 
 private:
-  std::string input;
+  void skipWhitespace();
+  std::string readCharacter();
+  std::string readString();
+  TokenType findIdent(std::string s);
+  bool isLetter(char c);
+  std::string readNum();
+  void readChar();
+  Token NextToken();
+  std::string readIdent();
+  bool isNum(char c);
+  bool next_line();
+  std::ifstream *input;
+  std::string current;
   char byte;
   int readPos;
   int pos;
